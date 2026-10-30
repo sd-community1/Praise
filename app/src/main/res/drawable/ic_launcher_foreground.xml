@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Background circle -->
+    <path
+        android:fillColor="#1C2B1C"
+        android:pathData="M54,54m-54,0a54,54 0,1 1,108 0a54,54 0,1 1,-108 0" />
+    <!-- Circular beads (tasbeeh) -->
+    <path
+        android:strokeColor="#D4AF37"
+        android:strokeWidth="3"
+        android:fillColor="#00000000"
+        android:pathData="M54,20 A34,34 0,1,1 53.9,20" />
+    <!-- Beads on the ring -->
+    <circle android:fillColor="#D4AF37" android:cx="54" android:cy="20" android:r="4"/>
+    <circle android:fillColor="#4CAF80" android:cx="80" android:cy="30" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="88" android:cy="54" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="80" android:cy="78" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="54" android:cy="88" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="28" android:cy="78" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="20" android:cy="54" android:r="3"/>
+    <circle android:fillColor="#4CAF80" android:cx="28" android:cy="30" android:r="3"/>
+    <!-- Arabic letter س in center -->
+    <path
+        android:fillColor="#D4AF37"
+        android:pathData="M42,58 Q54,48 66,58 Q60,65 54,63 Q48,65 42,58Z" />
+</vector>
