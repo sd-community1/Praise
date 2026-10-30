@@ -1,0 +1,148 @@
+name: Android Build
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.2.1'
+
+      - name: Print environment info
+        run: |
+          echo "=== Java Version ==="
+          java -version
+          echo "=== Gradle Version ==="
+          gradle --version
+          echo "=== Project Files ==="
+          find . -maxdepth 4 \
+            -not -path './.git/*' \
+            -not -path './app/build/*' \
+            | sort
+
+      - name: Validate project structure
+        run: |
+          echo "=== Validating required files ==="
+          FILES=(
+            "settings.gradle.kts"
+            "build.gradle.kts"
+            "gradle.properties"
+            "gradle/libs.versions.toml"
+            "app/build.gradle.kts"
+            "app/src/main/AndroidManifest.xml"
+            "app/src/main/kotlin/com/tasbeeh/app/MainActivity.kt"
+            "app/src/main/res/values/strings.xml"
+            "app/src/main/res/raw/click.wav"
+            "app/src/main/res/raw/complete.wav"
+          )
+          MISSING=0
+          for f in "${FILES[@]}"; do
+            if [ -f "$f" ]; then
+              echo "  ✅ $f"
+            else
+              echo "  ❌ MISSING: $f"
+              MISSING=1
+            fi
+          done
+          if [ "$MISSING" -eq 1 ]; then
+            echo "ERROR: Required files are missing. Aborting."
+            exit 1
+          fi
+
+      - name: Cache Gradle packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle.kts', '**/libs.versions.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Run unit tests
+        run: gradle testDebugUnitTest --no-daemon --stacktrace
+
+      - name: Upload test results on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: app/build/reports/tests/
+          retention-days: 7
+
+      - name: Build debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - name: Locate APK files
+        run: |
+          echo "=== All APK files produced ==="
+          find app/build/outputs -name "*.apk" 2>/dev/null || echo "No APKs in outputs"
+
+      - name: Verify APK exists and is valid
+        run: |
+          APK_PATH="app/build/outputs/apk/debug/app-debug.apk"
+          if [ ! -f "$APK_PATH" ]; then
+            echo "❌ ERROR: APK not found at $APK_PATH"
+            find . -name "*.apk" 2>/dev/null
+            exit 1
+          fi
+          SIZE=$(stat -c%s "$APK_PATH")
+          if [ "$SIZE" -lt 10000 ]; then
+            echo "❌ ERROR: APK is suspiciously small ($SIZE bytes)"
+            exit 1
+          fi
+          SHA=$(sha256sum "$APK_PATH" | cut -d' ' -f1)
+          echo ""
+          echo "✅ APK verified"
+          echo "   Path:   $APK_PATH"
+          echo "   Size:   $(du -h "$APK_PATH" | cut -f1)"
+          echo "   SHA256: $SHA"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Tasbeeh-Android-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+          if-no-files-found: error
+
+      - name: Build summary
+        if: success()
+        run: |
+          echo "================================================"
+          echo "✅ BUILD SUCCESSFUL — APK ready to download"
+          echo "================================================"
+          echo "Artifact name : Tasbeeh-Android-APK"
+          echo "APK size      : $(du -h app/build/outputs/apk/debug/app-debug.apk | cut -f1)"
+          echo ""
+          echo "Steps to install on your phone:"
+          echo "  1. Open your repo → Actions tab"
+          echo "  2. Click this workflow run"
+          echo "  3. Scroll down to Artifacts"
+          echo "  4. Download 'Tasbeeh-Android-APK'"
+          echo "  5. Unzip → install app-debug.apk"
+          echo "================================================"
